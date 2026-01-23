@@ -1,0 +1,19 @@
+{
+	"name": "game",
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"dev": "vite",
+		"preview": "vite preview",
+		"zip": "npm run build && mkdir -p dist && zip -r dist/game.zip dist -x \"**/.DS_Store\""
+	},
+	"dependencies": {
+		"@mediapipe/camera_utils": "^0.3.1675466862",
+		"@mediapipe/hands": "^0.4.1675469240",
+		"kaplay": "^3001.0.19"
+	},
+	"devDependencies": {
+		"@types/node": "^25.0.10",
+		"vite": "^7.3.1"
+	}
+}
