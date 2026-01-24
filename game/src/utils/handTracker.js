@@ -21,7 +21,8 @@ export function createHandTracker({
         maxNumHands: 1,
         modelComplexity: 0,
         minDetectionConfidence: 0.7,
-        minTrackingConfidence: 0.6,
+        minTrackingConfidence: 0.5,
+        
     });
 
     hands.onResults((results) => {

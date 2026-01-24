@@ -1,11 +1,14 @@
 import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 
-const UPDATE_INTERVAL = 50; // 20 Hz is enough
+const UPDATE_INTERVAL = 50; 
 const DEADZONE = 0.03;      // ignore tiny jitter
 
 let lastUpdate = 0;
 let handPresent = false;
+
+const GRASP_THRESHOLD = 0.4;
+let isGrasping = false;
 
 export function createPointerHandTracker({
     videoEl,
@@ -36,9 +39,10 @@ export function createPointerHandTracker({
             return;
         }
 
-        handPresent = true;
-
         const lm = results.multiHandLandmarks[0];
+        if (!handPresent) {
+            handPresent = true;
+        }
 
         const mcp = lm[5]; // index base
         const tip = lm[8]; // index tip
@@ -70,6 +74,40 @@ export function createPointerHandTracker({
                 value: direction,
             });
         }
+
+        // pALM GRASP DETECTION 
+        const wrist = lm[0]; // palm center
+
+        const fingerTips = [
+            lm[4],  // thumb
+            lm[8],  // index
+            lm[12], // middle
+            lm[16], // ring
+            lm[20], // pinky
+        ];
+
+        // average distance from palm to fingertips
+        let sum = 0;
+        for (const tip of fingerTips) {
+            sum += dist(wrist, tip);
+        }
+        const avgDist = sum / fingerTips.length;
+
+        const palmClosed = avgDist < GRASP_THRESHOLD;
+
+        // ---- DRAG n DROP ----
+        if (palmClosed && !isGrasping) {
+            isGrasping = true;
+            onGesture({ type: "DRAG_START" });
+            console.log("start")
+        }
+
+        if (!palmClosed && isGrasping) {
+            isGrasping = false;
+            onGesture({ type: "DRAG_RELEASE" });
+            console.log("release")
+        }
+
     });
 
     const camera = new Camera(videoEl, {
@@ -100,4 +138,9 @@ export function createPointerHandTracker({
             camera.stop();
         },
     };
+}
+function dist(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.sqrt(dx * dx + dy * dy);
 }
