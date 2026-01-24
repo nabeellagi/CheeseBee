@@ -7,7 +7,8 @@ export function grabberEntity({
 
 } = {}){
     // SET UP
-    const SPEED = 700;
+    const BASE_SPEED = 400;
+    let SPEED = BASE_SPEED;
     const SMOOTHNESS = 15;
 
     const root = k.add([
@@ -21,7 +22,9 @@ export function grabberEntity({
             targetVel: k.vec2(0, 0),
             speed: SPEED,
             smooth: SMOOTHNESS,
+            sprite: null
         },
+        "grabber"
     ]);
 
     const sprite = root.add([
@@ -38,13 +41,33 @@ export function grabberEntity({
         k.anchor("center"),
         k.area({ shape: new k.Rect(k.vec2(0, 0), 35, 40) }),
         k.body({ isStatic: true }),
+        "grabber"
     ])
     // Expose
     root.sprite = sprite;
 
+    // Run
+    k.onKeyPress("space", () => {
+        SPEED = BASE_SPEED + 600;
+        root.speed = SPEED;
+    })
+    k.onKeyRelease("space",() => {
+        SPEED = BASE_SPEED;
+        root.speed = SPEED;
+    });
+
+    // Slowdown
+     k.onKeyPress("shift", () => {
+        SPEED = BASE_SPEED - 300;
+        root.speed = SPEED;
+    })
+    k.onKeyRelease("shift",() => {
+        SPEED = BASE_SPEED;
+        root.speed = SPEED;
+    });
+
     return root
 }
-
 /**
 
  */

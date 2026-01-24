@@ -10,6 +10,7 @@
 	"dependencies": {
 		"@mediapipe/camera_utils": "^0.3.1675466862",
 		"@mediapipe/hands": "^0.4.1675469240",
+		"gsap": "^3.14.2",
 		"kaplay": "^3001.0.19"
 	},
 	"devDependencies": {

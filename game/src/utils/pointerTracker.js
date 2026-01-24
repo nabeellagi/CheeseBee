@@ -1,7 +1,7 @@
 import { Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 
-const UPDATE_INTERVAL = 50; 
+const UPDATE_INTERVAL = 50;
 const DEADZONE = 0.03;      // ignore tiny jitter
 
 let lastUpdate = 0;
@@ -129,8 +129,18 @@ export function createPointerHandTracker({
             camera.start();
         }
     }
+    function emitStop() {
+        if (!handPresent && !isGrasping) return;
+
+        handPresent = false;
+        isGrasping = false;
+        onGesture({ type: "STOP" });
+    }
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", emitStop);
+    window.addEventListener("blur", emitStop);
+
 
     return {
         stop() {

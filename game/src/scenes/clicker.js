@@ -1,4 +1,5 @@
 import { k } from "../core/kaplay";
+import { catEntity } from "../entity/cat";
 import { grabberEntity } from "../entity/grabber";
 // import { createHandTracker } from "../utils/handTracker";
 import { createPointerHandTracker } from "../utils/pointerTracker";
@@ -9,14 +10,31 @@ export function registerClicker() {
 
         // ==== SET UP ====
         const LAYERS = {
+            bg: 2,
+            cat: 3,
             grabber: 4,
-            cat: 5,
             cheese: 5,
             bee: 5
         };
+        // ==== SET BG ====
+        k.onDraw(() => {
+            k.drawSprite({
+                sprite: "bgroom",
+                pos: k.vec2(0, 0),
+                origin: "topleft",
+            }),
+            k.z(LAYERS.bg)
+        })
+
+        // ==== SET GRABBER n CAT ====
         const grabber = grabberEntity({
             z: LAYERS.grabber
-        })
+        });
+        const cat = catEntity({
+            z: LAYERS.cat,
+            pos: k.vec2(k.width()/2, k.height()/2 + 40)
+        });
+        k.loop(2.5, () => cat.jump())
         // ==== HAND STATE ====
         let currentDir = null;
         let dragging = false;
@@ -26,7 +44,18 @@ export function registerClicker() {
 
         // ==== VIDEO ====
         const video = document.createElement("video");
-        video.style.display = "none";
+        video.style.position = "fixed";
+        video.style.right = "12px";
+        video.style.bottom = "12px";
+        video.style.width = "140px";
+        video.style.height = "105px";
+        video.style.opacity = "0.75";
+        video.style.borderRadius = "10px";
+        video.style.border = "2px solid rgba(255,255,255,0.6)";
+        video.style.boxShadow = "0 6px 16px rgba(0,0,0,0.4)";
+        video.style.zIndex = "999";
+        video.style.transform = "scaleX(-1)"; // mirror
+        video.style.pointerEvents = "none";   // zero interaction cost
         document.body.appendChild(video);
 
         createPointerHandTracker({
@@ -88,10 +117,12 @@ export function registerClicker() {
                 grabber.scale.y = 1;
             }
 
-            if(dragging){
+            if (dragging) {
                 grabber.sprite.use(k.sprite("pawclose"))
-            }else{
+                grabber.sprite.color = k.rgb(206, 184, 132)
+            } else {
                 grabber.sprite.use(k.sprite("pawopen"))
+                grabber.sprite.color = k.rgb(255, 255, 255)
             }
 
             // Acceleration-based movement
