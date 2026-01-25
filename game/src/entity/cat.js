@@ -4,7 +4,11 @@ import gsap from 'gsap';
 export function catEntity({
     pos = k.center(),
     z = 1,
+    hp = 100
 }) {
+    // ==== SET UP ====
+    let isInvincible = false;
+
     const root = k.add([
         k.anchor("center"),
         k.pos(pos),
@@ -12,7 +16,15 @@ export function catEntity({
         "cat",
         {
             isJumping: false,
-            jump: () => { }
+            jump: () => { },
+            
+            hp:hp,
+            maxHp:hp,
+            setHp(value){
+                root.hp = k.clamp(value, 0, root.maxHp);
+                root.trigger("hpChanged", root.hp, root.maxHp);
+                k.shake(3)
+            }, 
         }
     ]);
 
@@ -20,7 +32,9 @@ export function catEntity({
     const sprite = root.add([
         k.sprite("idle"),
         k.scale(0.12),
-        k.anchor("center")
+        k.anchor("center"),
+        k.opacity(1),
+        k.color(k.rgb(255, 255, 255))
     ]);
 
     const hitBox = root.add([
@@ -28,14 +42,53 @@ export function catEntity({
         k.anchor("center"),
         k.area({ shape: new k.Rect(k.vec2(-7, 0), 100, 120) }),
         k.body({ isStatic: true }),
-        "cat"
+        "cat",
+        {
+            damage: (amount) => {
+                if(isInvincible) return;
+
+                root.hp = k.clamp(root.hp - amount, 0, hp);
+                isInvincible = true;
+                sprite.color = k.rgb(255, 100, 100);
+
+                sprite.use(k.sprite("hurt"));
+                gsap.fromTo(sprite, {
+                    opacity: 0.6
+                }, {
+                    opacity: 0.1,
+                    duration: 0.1,
+                    repeat: 7,
+                    yoyo: true,
+                    ease: "power1.inOut",
+                    onComplete: () => {
+                        k.wait(0.6, () => {     // HIT COOLDOWN
+                            isInvincible = false;
+                            sprite.opacity = 1;
+                            sprite.color = k.rgb(255, 255, 255);
+                            sprite.use(k.sprite("idle"));
+                        });
+                    }
+                });
+                root.trigger("hpChanged", root.hp, root.maxHp);
+
+                k.shake(6);
+
+                // ==== DEATH CASE ====
+                if (root.hp <= 0) {
+                    root.trigger("dead");
+                }
+            }
+        }
     ]);
+    root.hitBox = hitBox;
 
     root.jump = () => {
         if (root.isJumping) return;
 
         root.isJumping = true;
-        sprite.use(k.sprite("jump"));
+        isInvincible =  true;
+
+        if(sprite.sprite === "idle") sprite.use(k.sprite("jump"));
 
         const startX = root.pos.x;
         const startY = root.pos.y;
@@ -58,6 +111,7 @@ export function catEntity({
                 sprite.use(k.sprite("idle"));
                 sprite.scale.x = BASE_SCALE;
                 sprite.scale.y = BASE_SCALE;
+                isInvincible = false
             }
         });
 
@@ -98,6 +152,5 @@ export function catEntity({
             ease: "power2.in",
         }, "-=0.1");
     };
-
     return root
 }

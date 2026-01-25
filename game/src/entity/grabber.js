@@ -45,6 +45,7 @@ export function grabberEntity({
     ])
     // Expose
     root.sprite = sprite;
+    root.hitBox = hitbox;
 
     // Run
     k.onKeyPress("space", () => {

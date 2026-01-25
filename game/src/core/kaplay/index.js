@@ -10,4 +10,4 @@ export const k = kaplay({
     maxFPS: 60,
     canvas: document.getElementById("game")
 });
-preloadAll();
+// preloadAll();

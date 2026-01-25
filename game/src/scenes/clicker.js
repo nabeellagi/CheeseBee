@@ -1,6 +1,8 @@
 import { k } from "../core/kaplay";
+import { beeEntity } from "../entity/bee";
 import { catEntity } from "../entity/cat";
 import { grabberEntity } from "../entity/grabber";
+import { hpBarUI } from "../ui/hpBar";
 // import { createHandTracker } from "../utils/handTracker";
 import { createPointerHandTracker } from "../utils/pointerTracker";
 
@@ -14,7 +16,8 @@ export function registerClicker() {
             cat: 3,
             grabber: 4,
             cheese: 5,
-            bee: 5
+            bee: 5,
+            hpBar: 6
         };
         // ==== SET BG ====
         k.onDraw(() => {
@@ -22,8 +25,10 @@ export function registerClicker() {
                 sprite: "bgroom",
                 pos: k.vec2(0, 0),
                 origin: "topleft",
+                fixed: true
             }),
-            k.z(LAYERS.bg)
+                k.z(LAYERS.bg),
+                k.fixed()
         })
 
         // ==== SET GRABBER n CAT ====
@@ -32,9 +37,43 @@ export function registerClicker() {
         });
         const cat = catEntity({
             z: LAYERS.cat,
-            pos: k.vec2(k.width()/2, k.height()/2 + 40)
+            pos: k.vec2(k.width() / 2, k.height() / 2 + 40)
         });
-        k.loop(2.5, () => cat.jump())
+        k.loop(2.5, () => cat.jump());
+
+        // ===== SET HP =====
+        const hpBar = hpBarUI({
+            z: LAYERS.hpBar,
+            maxHP: cat.hp,
+            currentHP: cat.hp,
+            width: 200,
+            pos: k.vec2(k.width() / 2 - 70, k.height() - 90)
+        });
+        cat.on("hpChanged", (hp, maxHP) => {
+            hpBar.setHp(hp);
+        });
+
+        // ==== COLLIDE =====
+        cat.hitBox.onCollide("bee", (beeBox) => {
+            const bee = beeBox.parent;
+            if (!bee || bee.isInvincible) return;
+            cat.hitBox.damage(k.randi(3, 5));
+            beeBox.kill();
+        });
+        grabber.hitBox.onCollide("bee", (beeBox) => {
+            const bee = beeBox.parent;
+            if (!bee || bee.isInvincible) return;
+            cat.setHp(cat.hp++);
+            beeBox.kill();
+        });
+
+
+        // ==== ENEMY =====
+        const bee = beeEntity({
+            z: LAYERS.bee,
+            pos: k.vec2(100, 10)
+        });
+
         // ==== HAND STATE ====
         let currentDir = null;
         let dragging = false;
@@ -165,6 +204,9 @@ export function registerClicker() {
 
             clampToWorld(grabber);
         });
+
+        // ==== PANEL UI =====
+
 
     });
 }
