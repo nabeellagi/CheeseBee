@@ -1,5 +1,6 @@
 import gsap from "gsap";
 import { k } from "../core/kaplay";
+import { particle } from "../utils/particle";
 
 export function beeEntity({
     pos = k.center(),
@@ -54,6 +55,13 @@ export function beeEntity({
                     angle: 180,
                     ease: "power2.out",
                 }, "<")
+
+                particle({
+                    x: root.pos.x,
+                    y: root.pos.y,
+                    sprite: "honey",
+                    scale: 0.015
+                })
             }
         }
     ]);

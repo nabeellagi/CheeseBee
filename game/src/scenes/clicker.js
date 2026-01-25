@@ -1,3 +1,4 @@
+import gsap from "gsap";
 import { k } from "../core/kaplay";
 import { beeEntity } from "../entity/bee";
 import { catEntity } from "../entity/cat";
@@ -13,6 +14,7 @@ export function registerClicker() {
         // ==== SET UP ====
         const LAYERS = {
             bg: 2,
+            panel: 2,
             cat: 3,
             grabber: 4,
             cheese: 5,
@@ -63,7 +65,6 @@ export function registerClicker() {
         grabber.hitBox.onCollide("bee", (beeBox) => {
             const bee = beeBox.parent;
             if (!bee || bee.isInvincible) return;
-            cat.setHp(cat.hp++);
             beeBox.kill();
         });
 
@@ -206,8 +207,59 @@ export function registerClicker() {
         });
 
         // ==== PANEL UI =====
-
-
+        const panelRoot = k.add([
+            k.z(LAYERS.panel),
+            k.anchor("center"),
+            k.pos(200, 320),
+            k.sprite("panel1")
+        ]);
+        const beesKilled = panelRoot.add([
+            k.text("Bees Killed :\n0", {
+                font: "Kimbab",
+                size: 22,
+            }),
+            k.color("#8F0000"),
+            k.anchor("right"),
+            k.pos(10, -120)
+        ]);
+        const cheeseCatched = panelRoot.add([
+            k.text("Cheese Catched :\n0", {
+                font: "Kimbab",
+                size: 22
+            }),
+            k.color("#8F0000"),
+            k.anchor("right"),
+            k.pos(80, -35)
+        ]);
+        panelRoot.add([
+            k.text("SCORE", {
+                font: "Kimbab",
+                size: 32
+            }),
+            k.color("#8F0000"),
+            k.anchor("center"),
+            k.pos(0, 30)
+        ])
+        const scoreText = panelRoot.add([
+            k.text("0", {
+                font: "Kimbab",
+                size: 44
+            }),
+            k.color("#8F0000"),
+            k.anchor("center"),
+            k.pos(0, 70)
+        ]);
+        gsap.fromTo(panelRoot.pos,
+            {
+                y: 320,
+            },
+            {
+                y: 340,
+                yoyo: true,
+                repeat: -1,
+                ease: "power2.inOut"
+            }
+        )
     });
 }
 

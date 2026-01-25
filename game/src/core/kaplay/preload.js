@@ -8,7 +8,9 @@ const SPRITES = {
     happy: 'sprites/happy.png',
     jump: 'sprites/jump.png',
     bee0: 'sprites/bee0.png',
-    bee1: 'sprites/bee1.png',  
+    bee1: 'sprites/bee1.png',
+    panel1: 'sprites/panel1.png',
+    honey: 'sprites/honey.png'
 
 }
 
