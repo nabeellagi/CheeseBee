@@ -86,7 +86,6 @@ export function catEntity({
         if (root.isJumping) return;
 
         root.isJumping = true;
-        isInvincible =  true;
 
         if(sprite.sprite === "idle") sprite.use(k.sprite("jump"));
 
@@ -152,5 +151,17 @@ export function catEntity({
             ease: "power2.in",
         }, "-=0.1");
     };
+
+    let isHappy = false;
+    root.happy = () => {
+        if(isHappy) return;
+
+        isHappy = true;
+        sprite.use(k.sprite("happy"));
+        k.wait(1.2, () => {
+            sprite.use(k.sprite("idle"))
+            isHappy = false;
+        })
+    }
     return root
 }

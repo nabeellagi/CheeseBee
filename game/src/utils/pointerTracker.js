@@ -7,7 +7,7 @@ const DEADZONE = 0.03;      // ignore tiny jitter
 let lastUpdate = 0;
 let handPresent = false;
 
-const GRASP_THRESHOLD = 0.4;
+const GRASP_THRESHOLD = 0.6;
 let isGrasping = false;
 
 export function createPointerHandTracker({
@@ -79,11 +79,10 @@ export function createPointerHandTracker({
         const wrist = lm[0]; // palm center
 
         const fingerTips = [
-            lm[4],  // thumb
-            lm[8],  // index
-            lm[12], // middle
-            lm[16], // ring
-            lm[20], // pinky
+            lm[8],   // index
+            lm[12],  // middle
+            lm[16],  // ring
+            lm[20],  // pinky
         ];
 
         // average distance from palm to fingertips
@@ -95,18 +94,18 @@ export function createPointerHandTracker({
 
         const palmClosed = avgDist < GRASP_THRESHOLD;
 
-        // ---- DRAG n DROP ----
-        if (palmClosed && !isGrasping) {
-            isGrasping = true;
-            onGesture({ type: "DRAG_START" });
-            console.log("start")
-        }
+        // // ---- DRAG n DROP ----
+        // if (palmClosed && !isGrasping) {
+        //     isGrasping = true;
+        //     onGesture({ type: "DRAG_START" });
+        //     console.log("start")
+        // }
 
-        if (!palmClosed && isGrasping) {
-            isGrasping = false;
-            onGesture({ type: "DRAG_RELEASE" });
-            console.log("release")
-        }
+        // if (!palmClosed && isGrasping) {
+        //     isGrasping = false;
+        //     onGesture({ type: "DRAG_RELEASE" });
+        //     console.log("release")
+        // }
 
     });
 

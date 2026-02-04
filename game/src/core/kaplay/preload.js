@@ -10,7 +10,9 @@ const SPRITES = {
     bee0: 'sprites/bee0.png',
     bee1: 'sprites/bee1.png',
     panel1: 'sprites/panel1.png',
-    honey: 'sprites/honey.png'
+    honey: 'sprites/honey.png',
+    cheese1 : 'sprites/cheese1.png',
+    cheese2 : 'sprites/cheese2.png'
 
 }
 

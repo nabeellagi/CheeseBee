@@ -6,12 +6,15 @@ import { grabberEntity } from "../entity/grabber";
 import { hpBarUI } from "../ui/hpBar";
 // import { createHandTracker } from "../utils/handTracker";
 import { createPointerHandTracker } from "../utils/pointerTracker";
+import { cheeseEntity } from "../entity/cheese";
+import { zigzagChase } from "../utils/zigzagChase";
 
 export function registerClicker() {
     k.scene("clicker", () => {
         k.debug.inspect = true;
+        let gameState = "play";
 
-        // ==== SET UP ====
+        // ==== SET UP CONFIG ====
         const LAYERS = {
             bg: 2,
             panel: 2,
@@ -21,6 +24,15 @@ export function registerClicker() {
             bee: 5,
             hpBar: 6
         };
+
+        // ENTITY CONFIGs
+        const MAX_CHEESE = 7;
+        let currentCheese = 0;
+
+        const MAX_BEES = 3;
+        let currentBee = 0;
+
+
         // ==== SET BG ====
         k.onDraw(() => {
             k.drawSprite({
@@ -55,21 +67,87 @@ export function registerClicker() {
             hpBar.setHp(hp);
         });
 
-        // ==== COLLIDE =====
+        // ==== COLLIDE WITH BEE =====
+
+        // cat n bee
         cat.hitBox.onCollide("bee", (beeBox) => {
             const bee = beeBox.parent;
             if (!bee || bee.isInvincible) return;
+            
             cat.hitBox.damage(k.randi(3, 5));
+
+            gameStats.score = Math.max(0, gameStats.score - 1);
+            scoreText.text = gameStats.score.toString();
+
+            currentBee--;
             beeBox.kill();
         });
+
+        // grabber n bee
         grabber.hitBox.onCollide("bee", (beeBox) => {
             const bee = beeBox.parent;
             if (!bee || bee.isInvincible) return;
+
+            gameStats.beesKilled++;
+            updateScore();
+
+            currentBee--;
             beeBox.kill();
         });
 
+        // ==== DRAG CHEESE =====
+        let carriedCheese = null;
+        grabber.hitBox.onCollide("cheese", (cheeseBox) => {
+            if (carriedCheese) return;
+            k.debug.log("HIT CHEESE")
 
-        // ==== ENEMY =====
+            carriedCheese = cheeseBox.parent;
+
+            carriedCheese.onDestroy(() => {
+                if (carriedCheese === cheeseBox.parent) {
+                    carriedCheese = null;
+                }
+            });
+
+            // Optional juice
+            gsap.to(carriedCheese.scale, {
+                x: 0.9,
+                y: 0.9,
+                duration: 0.1,
+                ease: "power1.out"
+            });
+        });
+        k.onUpdate(() => {
+            if (carriedCheese) {
+                carriedCheese.pos = grabber.pos.add(k.vec2(0, -20));
+            }
+        });
+        // k.on("cheeseDied", (cheese) => {
+        //     if (carriedCheese === cheese) {
+        //         carriedCheese = null;
+        //     }
+        // });
+
+        // ===== CHEESE HEAL =====
+        cat.hitBox.onCollide("cheese", (cheeseBox) => {
+            const cheese = cheeseBox.parent;
+
+            if (cheese !== carriedCheese) return;
+
+            carriedCheese = null;
+
+            cat.setHp(cat.hp + 10);
+            cat.happy();
+
+            cheese.hitBox.kill();
+            currentCheese--;
+
+            gameStats.cheeseCaught++;
+            updateScore();
+
+        });
+
+        // ==== ENTITY TEST =====
         const bee = beeEntity({
             z: LAYERS.bee,
             pos: k.vec2(100, 10)
@@ -77,7 +155,7 @@ export function registerClicker() {
 
         // ==== HAND STATE ====
         let currentDir = null;
-        let dragging = false;
+        // let dragging = false;
         let visualAngle = 0;
         let targetAngle = 0;
         let facingLeft = false;
@@ -110,13 +188,21 @@ export function registerClicker() {
                         currentDir = null;
                         break;
 
-                    case "DRAG_START":
-                        dragging = true;
-                        break;
+                    // case "DRAG_START":
+                    //     dragging = true;
+                    //     break;
 
-                    case "DRAG_RELEASE":
-                        dragging = false;
-                        break;
+                    // case "DRAG_RELEASE":
+                    //     dragging = false;
+                    //     if (carriedCheese) {
+                    //         gsap.to(carriedCheese.scale, {
+                    //             x: 1,
+                    //             y: 1,
+                    //             duration: 0.1,
+                    //         });
+                    //         carriedCheese = null;
+                    //     }
+                    //     break;
                 }
             },
         });
@@ -157,13 +243,13 @@ export function registerClicker() {
                 grabber.scale.y = 1;
             }
 
-            if (dragging) {
-                grabber.sprite.use(k.sprite("pawclose"))
-                grabber.sprite.color = k.rgb(206, 184, 132)
-            } else {
-                grabber.sprite.use(k.sprite("pawopen"))
-                grabber.sprite.color = k.rgb(255, 255, 255)
-            }
+            // if (dragging) {
+            //     grabber.sprite.use(k.sprite("pawclose"))
+            //     grabber.sprite.color = k.rgb(206, 184, 132)
+            // } else {
+            //     grabber.sprite.use(k.sprite("pawopen"))
+            //     grabber.sprite.color = k.rgb(255, 255, 255)
+            // }
 
             // Acceleration-based movement
             const accel = grabber.targetVel
@@ -206,12 +292,32 @@ export function registerClicker() {
             clampToWorld(grabber);
         });
 
+        // ==== GAME STATS ====
+        const gameStats = {
+            beesKilled: 0,
+            cheeseCaught: 0,
+            score: 0,
+        };
+        function updateScore() {
+            gameStats.score =
+                gameStats.beesKilled * 2 +
+                (gameStats.cheeseCaught * 5 + 1);
+
+            beesKilled.text = `Bees Killed :\n${gameStats.beesKilled}`;
+            cheeseCatched.text = `Cheese Catched :\n${gameStats.cheeseCaught}`;
+            scoreText.text = gameStats.score.toString();
+        }
+
         // ==== PANEL UI =====
         const panelRoot = k.add([
             k.z(LAYERS.panel),
             k.anchor("center"),
             k.pos(200, 320),
-            k.sprite("panel1")
+            k.sprite("panel1"),
+            k.area(),
+            {
+                isDragging: false
+            }
         ]);
         const beesKilled = panelRoot.add([
             k.text("Bees Killed :\n0", {
@@ -249,17 +355,72 @@ export function registerClicker() {
             k.anchor("center"),
             k.pos(0, 70)
         ]);
-        gsap.fromTo(panelRoot.pos,
+        gsap.to(panelRoot.pos,
             {
-                y: 320,
-            },
-            {
-                y: 340,
+                y: panelRoot.pos.y + 50,
                 yoyo: true,
                 repeat: -1,
                 ease: "power2.inOut"
             }
-        )
+        );
+
+        panelRoot.onClick(() => {
+            gsap.killTweensOf(panelRoot.pos);
+            panelRoot.isDragging = true;
+        });
+        panelRoot.onMouseRelease(() => {
+            panelRoot.isDragging = false;
+            gsap.to(panelRoot.pos,
+                {
+                    y: panelRoot.pos.y + 50,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: "power2.inOut"
+                }
+            );
+        })
+        panelRoot.onUpdate(() => {
+            if (!panelRoot.isDragging) return;
+            // panelRoot.pos = k.mousePos();
+
+            const target = k.mousePos();
+            panelRoot.pos = panelRoot.pos.lerp(target, 0.25);
+        })
+
+        // ==== SPAWN ====
+
+        function spawnCheese() {
+            currentCheese++;
+            return cheeseEntity({
+                z: LAYERS.cheese,
+                pos: k.vec2(
+                    k.rand(80, k.width() - 80),
+                    k.rand(80, k.height() - 80)
+                )
+            })
+        };
+        k.loop(3.5, () => {
+            if (currentCheese < MAX_CHEESE) spawnCheese()
+        });
+
+        function spawnBee() {
+            currentBee++;
+
+            const bee = beeEntity({
+                z: LAYERS.bee,
+                pos: k.vec2(
+                    k.rand(-20, k.width() + 20),
+                    k.rand(0, k.width() + 50)
+                )
+            });
+            bee.onUpdate(
+                zigzagChase(cat)
+            )
+            return bee
+        }
+        k.loop(k.randi(3, 5), () => {
+            if (currentBee < MAX_BEES) spawnBee()
+        });
     });
 }
 

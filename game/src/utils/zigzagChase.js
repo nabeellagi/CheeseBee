@@ -9,7 +9,11 @@ export function zigzagChase(player,
 ) {
     let t = k.rand(0, 100)
 
-    return (enemy) => {
+    return function () {
+        const enemy = this;
+
+        if (!enemy.exists()) return;
+
         const toPlayer = player.pos.sub(enemy.pos)
         if (toPlayer.len() === 0) return
 
@@ -20,6 +24,8 @@ export function zigzagChase(player,
 
         const zigzag =
             perpendicular.scale(Math.sin(t) * zigzagStrength)
+        
+        // if
 
         const finalDir = forward.add(zigzag).unit()
         enemy.move(finalDir.scale(speed))
