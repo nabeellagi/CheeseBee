@@ -7,8 +7,14 @@ const DEADZONE = 0.03;      // ignore tiny jitter
 let lastUpdate = 0;
 let handPresent = false;
 
-const GRASP_THRESHOLD = 0.6;
+const GRASP_THRESHOLD = 0.25;
 let isGrasping = false;
+
+let openPalmHoldStart = null;
+let palmSignalSent = false;
+
+const HOLD_DURATION = 100; // ms
+
 
 export function createPointerHandTracker({
     videoEl,
@@ -20,7 +26,7 @@ export function createPointerHandTracker({
     });
 
     hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2,
         modelComplexity: 1,
         minDetectionConfidence: 0.7,
         minTrackingConfidence: 0.6,
@@ -52,29 +58,28 @@ export function createPointerHandTracker({
 
         // ignore jitter
         if (Math.abs(dx) < DEADZONE && Math.abs(dy) < DEADZONE) {
-            onGesture({ type: "STOP" });
-            return;
+
+        } else {
+
+            let dirX = "";
+            let dirY = "";
+
+            if (dx > DEADZONE) dirX = "LEFT";
+            else if (dx < -DEADZONE) dirX = "RIGHT";
+
+            if (dy > DEADZONE) dirY = "DOWN";
+            else if (dy < -DEADZONE) dirY = "UP";
+
+            const direction =
+                dirX && dirY ? `${dirY}-${dirX}` : dirX || dirY;
+
+            if (direction) {
+                onGesture({
+                    type: "DIRECTION",
+                    value: direction,
+                });
+            }
         }
-
-        let dirX = "";
-        let dirY = "";
-
-        if (dx > DEADZONE) dirX = "LEFT";
-        else if (dx < -DEADZONE) dirX = "RIGHT";
-
-        if (dy > DEADZONE) dirY = "DOWN";
-        else if (dy < -DEADZONE) dirY = "UP";
-
-        const direction =
-            dirX && dirY ? `${dirY}-${dirX}` : dirX || dirY;
-
-        if (direction) {
-            onGesture({
-                type: "DIRECTION",
-                value: direction,
-            });
-        }
-
         // pALM GRASP DETECTION 
         const wrist = lm[0]; // palm center
 
@@ -106,6 +111,43 @@ export function createPointerHandTracker({
         //     onGesture({ type: "DRAG_RELEASE" });
         //     console.log("release")
         // }
+
+        // ===== OPEN PALM HOLD (2 HANDS) =====
+        if (results.multiHandLandmarks.length === 2) {
+            const palmsOpen = results.multiHandLandmarks.every((lm) => {
+                const wrist = lm[0];
+                const tips = [lm[8], lm[12], lm[16], lm[20]];
+
+                let sum = 0;
+                for (const tip of tips) {
+                    sum += dist(wrist, tip);
+                }
+
+                const avg = sum / tips.length;
+                return avg > GRASP_THRESHOLD; // OPEN palm
+            });
+
+            if (palmsOpen) {
+                if (!openPalmHoldStart) {
+                    openPalmHoldStart = now;
+                    palmSignalSent = false;
+                }
+
+                if (
+                    !palmSignalSent &&
+                    now - openPalmHoldStart >= HOLD_DURATION
+                ) {
+                    palmSignalSent = true;
+                    onGesture({ type: "PALM_HOLD" });
+                }
+            } else {
+                openPalmHoldStart = null;
+                palmSignalSent = false;
+            }
+        } else {
+            openPalmHoldStart = null;
+            palmSignalSent = false;
+        }
 
     });
 

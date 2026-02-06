@@ -18,12 +18,17 @@ export function createHandTracker({
     });
 
     hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2,
         modelComplexity: 0,
         minDetectionConfidence: 0.7,
         minTrackingConfidence: 0.5,
-        
+
     });
+
+    let clawHoldStart = null;
+    let clawTriggered = false;
+    const CLAW_HOLD_TIME = 500; // ms
+
 
     hands.onResults((results) => {
         const now = performance.now();
@@ -94,20 +99,46 @@ export function createHandTracker({
             });
         }
 
+        const handsLm = results.multiHandLandmarks;
+
+        if (handsLm.length === 2) {
+            const leftOpen = isPalmOpen(handsLm[0]);
+            const rightOpen = isPalmOpen(handsLm[1]);
+
+            if (leftOpen && rightOpen) {
+                if (!clawHoldStart) {
+                    clawHoldStart = now;
+                    clawTriggered = false;
+                }
+
+                if (!clawTriggered && now - clawHoldStart >= CLAW_HOLD_TIME) {
+                    clawTriggered = true;
+                    onGesture({ type: "CLAW_POSE" });
+                }
+            } else {
+                clawHoldStart = null;
+                clawTriggered = false;
+            }
+        } else {
+            clawHoldStart = null;
+            clawTriggered = false;
+        }
+
         // ---------- PINCH ----------
-        const dx = index.tip.x - thumb.tip.x;
-        const dy = index.tip.y - thumb.tip.y;
-        const pinchDist = Math.sqrt(dx * dx + dy * dy);
+        // const dx = index.tip.x - thumb.tip.x;
+        // const dy = index.tip.y - thumb.tip.y;
+        // const pinchDist = Math.sqrt(dx * dx + dy * dy);
 
-        if (pinchDist < PINCH_THRESHOLD && !pinchActive) {
-            pinchActive = true;
-            onGesture({ type: "PINCH_START" });
-        }
+        // if (pinchDist < PINCH_THRESHOLD && !pinchActive) {
+        //     pinchActive = true;
+        //     onGesture({ type: "PINCH_START" });
+        // }
 
-        if (pinchDist >= PINCH_THRESHOLD && pinchActive) {
-            pinchActive = false;
-            onGesture({ type: "PINCH_RELEASE" });
-        }
+        // if (pinchDist >= PINCH_THRESHOLD && pinchActive) {
+        //     pinchActive = false;
+        //     onGesture({ type: "PINCH_RELEASE" });
+        // }
+
     });
 
     const camera = new Camera(videoEl, {
@@ -118,6 +149,7 @@ export function createHandTracker({
         },
     });
     camera.start();
+
     function handleVisibilityChange() {
         if (document.hidden) {
             camera.stop();
@@ -128,6 +160,28 @@ export function createHandTracker({
         }
     }
     document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // HELPERS
+    function isPalmOpen(lm) {
+        const fingers = [
+            [8, 5],   // index
+            [12, 9],  // middle
+            [16, 13], // ring
+            [20, 17], // pinky
+        ];
+
+        let extended = 0;
+        for (const [tip, mcp] of fingers) {
+            if (dist(lm[tip], lm[mcp]) > 0.12) {
+                extended++;
+            }
+        }
+
+        const thumbExtended = dist(lm[4], lm[2]) > 0.15;
+
+        return extended >= 4 && thumbExtended;
+    }
+
 
 
     return {

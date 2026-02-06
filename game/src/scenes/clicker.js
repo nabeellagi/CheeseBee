@@ -11,7 +11,7 @@ import { zigzagChase } from "../utils/zigzagChase";
 
 export function registerClicker() {
     k.scene("clicker", () => {
-        k.debug.inspect = true;
+        // k.debug.inspect = true;
         let gameState = "play";
 
         // ==== SET UP CONFIG ====
@@ -29,7 +29,7 @@ export function registerClicker() {
         const MAX_CHEESE = 7;
         let currentCheese = 0;
 
-        const MAX_BEES = 3;
+        const MAX_BEES = 5;
         let currentBee = 0;
 
 
@@ -53,7 +53,20 @@ export function registerClicker() {
             z: LAYERS.cat,
             pos: k.vec2(k.width() / 2, k.height() / 2 + 40)
         });
-        k.loop(2.5, () => cat.jump());
+
+        // Cat dynamic
+        let jumpTimer = 0;
+        k.onUpdate(() => {
+            jumpTimer -= k.dt();
+
+            const diff = getDifficulty();
+            const jumpInterval = k.lerp(1.2, 0.3, diff);
+
+            if (jumpTimer <= 0) {
+                cat.jump();
+                jumpTimer = jumpInterval;
+            }
+        });
 
         // ===== SET HP =====
         const hpBar = hpBarUI({
@@ -73,8 +86,8 @@ export function registerClicker() {
         cat.hitBox.onCollide("bee", (beeBox) => {
             const bee = beeBox.parent;
             if (!bee || bee.isInvincible) return;
-            
-            cat.hitBox.damage(k.randi(3, 5));
+
+            cat.hitBox.damage(k.randi(9, 12));
 
             gameStats.score = Math.max(0, gameStats.score - 1);
             scoreText.text = gameStats.score.toString();
@@ -136,7 +149,7 @@ export function registerClicker() {
 
             carriedCheese = null;
 
-            cat.setHp(cat.hp + 10);
+            cat.setHp(cat.hp + k.randi(6, 9));
             cat.happy();
 
             cheese.hitBox.kill();
@@ -188,6 +201,10 @@ export function registerClicker() {
                         currentDir = null;
                         break;
 
+                    case "PALM_HOLD":
+                        alert(0)
+                        break
+
                     // case "DRAG_START":
                     //     dragging = true;
                     //     break;
@@ -209,9 +226,15 @@ export function registerClicker() {
 
         // ==== UPDATE LOOP ====
         k.onUpdate(() => {
+            const diff = getDifficulty();
+            grabber.speed = k.lerp(400, 900, diff);
+
             grabber.targetVel = k.vec2(0, 0);
 
             if (currentDir) {
+                grabber.targetVel = grabber.targetVel
+                    .unit()
+                    .scale(grabber.speed);
                 if (currentDir.includes("UP")) {
                     grabber.targetVel.y -= 1;
                     // grabber.scale.y = 1;
@@ -306,6 +329,11 @@ export function registerClicker() {
             beesKilled.text = `Bees Killed :\n${gameStats.beesKilled}`;
             cheeseCatched.text = `Cheese Catched :\n${gameStats.cheeseCaught}`;
             scoreText.text = gameStats.score.toString();
+
+            const diff = getDifficulty();
+            const speedScale = k.lerp(1, 2.5, diff);
+
+            cat.setSpeedScale(speedScale);
         }
 
         // ==== PANEL UI =====
@@ -413,14 +441,35 @@ export function registerClicker() {
                     k.rand(0, k.width() + 50)
                 )
             });
+            const diff = getDifficulty();
+            const beeSpeed = k.lerp(130, 350, diff);
             bee.onUpdate(
-                zigzagChase(cat)
-            )
+                zigzagChase(cat, {
+                    speed: beeSpeed
+                })
+            );
             return bee
         }
         k.loop(k.randi(3, 5), () => {
             if (currentBee < MAX_BEES) spawnBee()
         });
+
+        function getDifficulty() {
+            const cycleLength = 25;
+            const rampUp = 20;
+            const rampDown = 5;
+
+            const cheese = gameStats.cheeseCaught;
+            const cyclePos = cheese % cycleLength;
+
+            if (cyclePos < rampUp) {
+                return cyclePos / rampUp;
+            }
+
+            const downPos = cyclePos - rampUp;
+            return 1 - (downPos / rampDown);
+        }
+
     });
 }
 

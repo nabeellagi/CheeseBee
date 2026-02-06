@@ -4,7 +4,8 @@ import gsap from 'gsap';
 export function catEntity({
     pos = k.center(),
     z = 1,
-    hp = 100
+    hp = 100,
+    speedScale = 1
 }) {
     // ==== SET UP ====
     let isInvincible = false;
@@ -20,11 +21,15 @@ export function catEntity({
             
             hp:hp,
             maxHp:hp,
+            speedScale:speedScale,
             setHp(value){
                 root.hp = k.clamp(value, 0, root.maxHp);
                 root.trigger("hpChanged", root.hp, root.maxHp);
                 k.shake(3)
             }, 
+            setSpeedScale(value){
+                root.speedScale = value
+            }
         }
     ]);
 
@@ -95,8 +100,8 @@ export function catEntity({
         const dir = k.rand() > 0.5 ? 1 : -1;
         sprite.scale.x = dir > 0 ? -BASE_SCALE : BASE_SCALE;
 
-        const jumpHeight = k.rand(80, 130);
-        const jumpDistance = k.rand(60, 120);
+        const jumpHeight = k.rand(60, 100) * root.speedScale;
+        const jumpDistance = k.rand(60, 120) * root.speedScale;
 
         const targetX = k.clamp(
             startX + dir * jumpDistance,
