@@ -10,6 +10,9 @@ import { cheeseEntity } from "../entity/cheese";
 import { zigzagChase } from "../utils/zigzagChase";
 import { animText } from "../ui/animText";
 
+
+// If ure readin this, idk what am i doin
+
 export function registerClicker() {
     k.scene("clicker", () => {
         // k.debug.inspect = true;
@@ -94,6 +97,17 @@ export function registerClicker() {
         cat.on("hpChanged", (hp, maxHP) => {
             hpBar.setHp(hp);
             if (cat.hp === 0) {
+                if (gameStats.score > bestScore) {
+                    bestScore = gameStats.score;
+
+                    highScore.text = `High Score :\n${bestScore}`;
+
+                    dbSet("score", {
+                        current: 0,
+                        best: bestScore,
+                    });
+                }
+
                 gameStats.score = 0;
                 gameStats.beesKilled = 0;
                 gameStats.cheeseCaught = 0;
@@ -120,7 +134,7 @@ export function registerClicker() {
 
             cat.hitBox.damage(k.randi(9, 12));
 
-            gameStats.score = Math.max(0, gameStats.score - 1);
+            gameStats.score = Math.max(0, gameStats.score - k.randi(2, 3));
             scoreText.text = gameStats.score.toString();
 
             currentBee--;
@@ -133,6 +147,7 @@ export function registerClicker() {
             if (!bee || bee.isInvincible) return;
 
             gameStats.beesKilled++;
+            gameStats.score += 2;
             updateScore();
 
             registerCombo();
@@ -191,6 +206,7 @@ export function registerClicker() {
             registerCombo();
 
             gameStats.cheeseCaught++;
+            gameStats.score += 5;
             updateScore();
 
         });
@@ -231,7 +247,8 @@ export function registerClicker() {
                         break;
 
                     case "PALM_HOLD":
-                        alert(0)
+                        // alert(0)
+                        onPawOpen()
                         break
 
                     // case "DRAG_START":
@@ -351,19 +368,20 @@ export function registerClicker() {
             score: 0,
         };
         function updateScore() {
-            gameStats.score =
-                gameStats.beesKilled * 2 +
-                (gameStats.cheeseCaught * 5 + 1);
-
             beesKilled.text = `Bees Killed :\n${gameStats.beesKilled}`;
             cheeseCatched.text = `Cheese Catched :\n${gameStats.cheeseCaught}`;
             scoreText.text = gameStats.score.toString();
 
+            dbSet("score", {
+                current: gameStats.score,
+                best: bestScore,
+            });
+
             const diff = getDifficulty();
             const speedScale = k.lerp(1, 2.5, diff);
-
             cat.setSpeedScale(speedScale);
         }
+
 
         // ==== PANEL UI =====
         const panelRoot = k.add([
@@ -394,6 +412,15 @@ export function registerClicker() {
             k.anchor("right"),
             k.pos(80, -35)
         ]);
+        const highScore = panelRoot.add([
+            k.text("High Score :\n0", {
+                font: "Kimbab",
+                size: 22
+            }),
+            k.color("#8F0000"),
+            k.anchor("right"),
+            k.pos(20, 150)
+        ])
         panelRoot.add([
             k.text("SCORE", {
                 font: "Kimbab",
@@ -443,6 +470,163 @@ export function registerClicker() {
             const target = k.mousePos();
             panelRoot.pos = panelRoot.pos.lerp(target, 0.25);
         });
+
+        let bestScore = 0;
+
+        // (async () => {
+        //     const saved = await dbGet("score");
+        //     if (saved) {
+        //         bestScore = saved.best ?? 0;
+        //         highScore.text = `High Score :\n${bestScore}`;
+        //     }
+        // })();
+
+        // (async () => {
+        //     const saved = await dbGet("score");
+        //     if (saved) {
+        //         bestScore = saved.best ?? 0;
+        //         gameStats.score = saved.current ?? 0;
+
+        //         highScore.text = `High Score :\n${bestScore}`;
+        //         scoreText.text = gameStats.score.toString();
+        //     }
+        // })();
+
+        // ==== CLOCK SYSTEM ====
+        const clockState = {
+            timeLeft: 0,
+            duration: 0,
+            phase: "idle",
+            waitingForPaw: false,
+            pawReceived: false,
+        }
+
+        const clock = k.add([
+            k.sprite("clock"),
+            k.anchor("center"),
+            k.pos(k.width() - 100, k.height() - 300)
+        ]);
+        const clockText = k.add([
+            k.text("00:00", {
+                font: "Steve",
+                size: 49,
+                letterSpacing: 1.5
+            }),
+            k.color("#351402"),
+            k.anchor("center"),
+            k.pos(k.width() - 106, k.height() - 270)
+        ]);
+
+        function startClock() {
+            clockState.duration = k.randi(8, 12)
+            clockState.timeLeft = clockState.duration
+            clockState.phase = "countdown"
+            clockState.waitingForPaw = false
+            clockState.pawReceived = false
+
+            animText({
+                text: "READY!",
+                fontSize: 40,
+                color: "#FFD700",
+                duration: 0.6,
+            })
+        }
+        startClock();
+
+        k.onUpdate(() => {
+            if (clockState.phase === "idle") return
+
+            clockState.timeLeft -= k.dt()
+
+            // WARNING PHASE
+            if (
+                clockState.timeLeft <= 3 &&
+                clockState.phase === "countdown"
+            ) {
+                clockState.phase = "warning"
+                clockState.waitingForPaw = true
+
+                clockText.color = k.rgb(200, 0, 0)
+            }
+
+
+            // INPUT WINDOW
+            if (
+                clockState.timeLeft <= 0 &&
+                clockState.phase !== "resolve"
+            ) {
+                resolveClock()
+            }
+
+            updateClockText()
+        })
+
+        function updateClockText() {
+            const t = Math.max(0, clockState.timeLeft)
+            const seconds = Math.ceil(t)
+
+            clockText.text = `00:${seconds.toString().padStart(2, "0")}`
+        }
+        function onPawOpen() {
+            if (clockState.phase === "resolve") return;
+
+            // TOO EARLY
+            if (!clockState.waitingForPaw) {
+                gameStats.score = Math.max(0, gameStats.score - 20);
+
+                updateScore();
+
+                animText({
+                    text: "TOO EARLY!",
+                    fontSize: 42,
+                    color: "#ff0101",
+                    duration: 1,
+                });
+                return;
+            }
+
+            clockState.pawReceived = true;
+            resolveClock();
+        }
+
+        function resolveClock() {
+            clockState.phase = "resolve"
+            clockState.waitingForPaw = true
+
+            if (clockState.pawReceived) {
+                gameStats.score += 50;
+                updateScore()
+
+                animText({
+                    text: "PERFECT!",
+                    fontSize: 90,
+                    color: "#f6ff00",
+                    duration: 1.2,
+                })
+
+                k.play("perf", {
+                    volume: 1.7
+                })
+
+            } else {
+                gameStats.score = Math.max(0, gameStats.score - 50);
+                updateScore()
+
+                animText({
+                    text: "MISSED!",
+                    fontSize: 55,
+                    color: "#FF2222",
+                    duration: 1.2,
+                })
+
+            }
+
+            k.wait(1.5, () => {
+                clockText.color = k.rgb(53, 20, 2)
+                startClock()
+            })
+        }
+
 
         // ==== COMBO SYSTEM ====
         let combo = 0;
@@ -544,4 +728,40 @@ function clampToWorld(ent) {
         paddH,
         k.height() - paddH
     );
+}
+
+
+// SAVE FILE HELPERS
+
+const DB_NAME = "clicker-db";
+const STORE = "scores";
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore(STORE);
+        };
+
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbGet(key) {
+    const db = await openDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction(STORE, "readonly");
+        const store = tx.objectStore(STORE);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+    });
+}
+
+async function dbSet(key, value) {
+    const db = await openDB();
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(value, key);
 }

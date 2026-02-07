@@ -7,7 +7,7 @@ const DEADZONE = 0.03;      // ignore tiny jitter
 let lastUpdate = 0;
 let handPresent = false;
 
-const GRASP_THRESHOLD = 0.25;
+const GRASP_THRESHOLD = 0.1;
 let isGrasping = false;
 
 let openPalmHoldStart = null;

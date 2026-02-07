@@ -12,7 +12,8 @@ const SPRITES = {
     panel1: 'sprites/panel1.png',
     honey: 'sprites/honey.png',
     cheese1 : 'sprites/cheese1.png',
-    cheese2 : 'sprites/cheese2.png'
+    cheese2 : 'sprites/cheese2.png',
+    clock : 'sprites/clock.png'
 
 }
 
@@ -36,7 +37,8 @@ const SFX = {
     cat1 : 'sfx/cat1.ogg',
     cat2 : 'sfx/cat2.ogg',
     coin3 : 'sfx/coin3.wav',
-    combo : 'sfx/combo.wav'
+    combo : 'sfx/combo.wav',
+    perf : 'sfx/perf.wav',
 }
 
 export async function preloadAll(){
