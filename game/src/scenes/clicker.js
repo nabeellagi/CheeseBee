@@ -8,11 +8,26 @@ import { hpBarUI } from "../ui/hpBar";
 import { createPointerHandTracker } from "../utils/pointerTracker";
 import { cheeseEntity } from "../entity/cheese";
 import { zigzagChase } from "../utils/zigzagChase";
+import { animText } from "../ui/animText";
 
 export function registerClicker() {
     k.scene("clicker", () => {
         // k.debug.inspect = true;
         let gameState = "play";
+
+        // MUSIC
+        const getBgm = () => k.choose(["sweet", "puzzles", "party", "booty"])
+
+        let bgm = null
+        function playRandomBgm() {
+            bgm = k.play(getBgm(), {
+                loop: false,
+            })
+            bgm.onEnd(() => {
+                playRandomBgm()
+            })
+        }
+        playRandomBgm()
 
         // ==== SET UP CONFIG ====
         const LAYERS = {
@@ -78,6 +93,22 @@ export function registerClicker() {
         });
         cat.on("hpChanged", (hp, maxHP) => {
             hpBar.setHp(hp);
+            if (cat.hp === 0) {
+                gameStats.score = 0;
+                gameStats.beesKilled = 0;
+                gameStats.cheeseCaught = 0;
+                scoreText.text = "0";
+                animText({
+                    text: "TRY AGAIN!",
+                    fontSize: 80,
+                    color: "#FF4444",
+                    duration: 1.5,
+                    onComplete: () => {
+                        updateScore();
+                        cat.setHp(maxHP)
+                    },
+                });
+            }
         });
 
         // ==== COLLIDE WITH BEE =====
@@ -103,6 +134,8 @@ export function registerClicker() {
 
             gameStats.beesKilled++;
             updateScore();
+
+            registerCombo();
 
             currentBee--;
             beeBox.kill();
@@ -155,15 +188,11 @@ export function registerClicker() {
             cheese.hitBox.kill();
             currentCheese--;
 
+            registerCombo();
+
             gameStats.cheeseCaught++;
             updateScore();
 
-        });
-
-        // ==== ENTITY TEST =====
-        const bee = beeEntity({
-            z: LAYERS.bee,
-            pos: k.vec2(100, 10)
         });
 
         // ==== HAND STATE ====
@@ -413,7 +442,34 @@ export function registerClicker() {
 
             const target = k.mousePos();
             panelRoot.pos = panelRoot.pos.lerp(target, 0.25);
-        })
+        });
+
+        // ==== COMBO SYSTEM ====
+        let combo = 0;
+        let comboTimer = 0;
+        k.onUpdate(() => {
+            comboTimer -= k.dt();
+            if (comboTimer <= 0) combo = 0;
+        });
+        function registerCombo() {
+            combo++;
+            comboTimer = 2; // seconds to continue combo
+
+            if (combo >= 2 && combo <= 4) {
+                animText({
+                    text: `COMBO x${combo}!`,
+                    fontSize: 50 + combo * 4,
+                    color: "#FFD700",
+                    duration: 0.9,
+                    z: 8,
+                });
+
+                k.play("combo");
+
+                gameStats.score += combo;
+                updateScore();
+            }
+        }
 
         // ==== SPAWN ====
 

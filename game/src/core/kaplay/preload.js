@@ -21,7 +21,22 @@ const BACKGROUNDS = {
 }
 
 const FONTS = {
-    kimbab : 'fonts/Kimbab.ttf'
+    kimbab : 'fonts/Kimbab.ttf',
+    steve :  'fonts/Steve.ttf'
+}
+
+const MUS = {
+    puzzles : 'mus/puzzles.ogg',
+    sweet : 'mus/sweet.ogg',
+    booty : 'mus/booty.ogg',
+    party : 'mus/party.ogg'
+}
+
+const SFX = {
+    cat1 : 'sfx/cat1.ogg',
+    cat2 : 'sfx/cat2.ogg',
+    coin3 : 'sfx/coin3.wav',
+    combo : 'sfx/combo.wav'
 }
 
 export async function preloadAll(){
@@ -34,6 +49,12 @@ export async function preloadAll(){
 
     // FONTS
     for(const [key, value] of Object.entries(FONTS)) tasks.push(k.loadFont(key, value));
+
+    // MUS
+    for(const [key, value] of Object.entries(MUS)) tasks.push(k.loadSound(key, value));
+
+    // SFX
+    for(const [key, value] of Object.entries(SFX)) tasks.push(k.loadSound(key, value));
 
     await Promise.all(tasks);
 }

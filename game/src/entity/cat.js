@@ -18,16 +18,16 @@ export function catEntity({
         {
             isJumping: false,
             jump: () => { },
-            
-            hp:hp,
-            maxHp:hp,
-            speedScale:speedScale,
-            setHp(value){
+
+            hp: hp,
+            maxHp: hp,
+            speedScale: speedScale,
+            setHp(value) {
                 root.hp = k.clamp(value, 0, root.maxHp);
                 root.trigger("hpChanged", root.hp, root.maxHp);
                 k.shake(3)
-            }, 
-            setSpeedScale(value){
+            },
+            setSpeedScale(value) {
                 root.speedScale = value
             }
         }
@@ -50,7 +50,7 @@ export function catEntity({
         "cat",
         {
             damage: (amount) => {
-                if(isInvincible) return;
+                if (isInvincible) return;
 
                 root.hp = k.clamp(root.hp - amount, 0, hp);
                 isInvincible = true;
@@ -92,7 +92,7 @@ export function catEntity({
 
         root.isJumping = true;
 
-        if(sprite.sprite === "idle") sprite.use(k.sprite("jump"));
+        if (sprite.sprite === "idle") sprite.use(k.sprite("jump"));
 
         const startX = root.pos.x;
         const startY = root.pos.y;
@@ -109,6 +109,11 @@ export function catEntity({
             k.width() - 50
         );
 
+        if (k.rand() < 0.15) {
+            k.play(k.choose(["cat1", "cat2"]), {
+                volume: 1.4,
+            })
+        }
         const tl = gsap.timeline({
             onComplete: () => {
                 root.isJumping = false;
@@ -159,7 +164,7 @@ export function catEntity({
 
     let isHappy = false;
     root.happy = () => {
-        if(isHappy) return;
+        if (isHappy) return;
 
         isHappy = true;
         sprite.use(k.sprite("happy"));
