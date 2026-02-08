@@ -97,29 +97,20 @@ export function registerClicker() {
         cat.on("hpChanged", (hp, maxHP) => {
             hpBar.setHp(hp);
             if (cat.hp === 0) {
-                if (gameStats.score > bestScore) {
-                    bestScore = gameStats.score;
-
-                    highScore.text = `High Score :\n${bestScore}`;
-
-                    dbSet("score", {
-                        current: 0,
-                        best: bestScore,
-                    });
-                }
+                saveScore("death");
 
                 gameStats.score = 0;
                 gameStats.beesKilled = 0;
                 gameStats.cheeseCaught = 0;
                 scoreText.text = "0";
+
                 animText({
                     text: "TRY AGAIN!",
                     fontSize: 80,
                     color: "#FF4444",
                     duration: 1.5,
                     onComplete: () => {
-                        updateScore();
-                        cat.setHp(maxHP)
+                        cat.setHp(maxHP);
                     },
                 });
             }
@@ -160,7 +151,7 @@ export function registerClicker() {
         let carriedCheese = null;
         grabber.hitBox.onCollide("cheese", (cheeseBox) => {
             if (carriedCheese) return;
-            k.debug.log("HIT CHEESE")
+            // k.debug.log("HIT CHEESE")
 
             carriedCheese = cheeseBox.parent;
 
@@ -367,21 +358,20 @@ export function registerClicker() {
             cheeseCaught: 0,
             score: 0,
         };
+
+        let scoreLoaded = false;
+        let lastSaveTime = 0;
+        const SAVE_INTERVAL = 20; // seconds
+
         function updateScore() {
             beesKilled.text = `Bees Killed :\n${gameStats.beesKilled}`;
             cheeseCatched.text = `Cheese Catched :\n${gameStats.cheeseCaught}`;
             scoreText.text = gameStats.score.toString();
 
-            dbSet("score", {
-                current: gameStats.score,
-                best: bestScore,
-            });
-
             const diff = getDifficulty();
             const speedScale = k.lerp(1, 2.5, diff);
             cat.setSpeedScale(speedScale);
         }
-
 
         // ==== PANEL UI =====
         const panelRoot = k.add([
@@ -490,7 +480,62 @@ export function registerClicker() {
         //         highScore.text = `High Score :\n${bestScore}`;
         //         scoreText.text = gameStats.score.toString();
         //     }
-        // })();
+        // })()
+
+        // SCORESSS
+
+        (async () => {
+            const saved = await dbGet("score");
+            if (saved) {
+                bestScore = saved.best ?? 0;
+                gameStats.score = saved.current ?? 0;
+
+                highScore.text = `High Score :\n${bestScore}`;
+                scoreText.text = gameStats.score.toString();
+            }
+            scoreLoaded = true;
+        })();
+
+        function saveScore(reason = "auto") {
+            if (!scoreLoaded) return;
+
+            bestScore = Math.max(bestScore, gameStats.score);
+
+            dbSet("score", {
+                current: gameStats.score,
+                best: bestScore,
+            });
+
+            highScore.text = `High Score :\n${bestScore}`;
+
+            if (reason === "auto") {
+                const txt = k.add([
+                    k.text("Saving score...", {
+                        size: 32,
+                        font: "steve",
+                    }),
+                    k.color(k.rgb(85, 40, 1)),
+                    k.anchor("left"),
+                    k.pos(k.width() - 300, 200),
+                    k.opacity(0),
+                    k.z(100),
+                ]);
+
+                gsap.to(txt, { opacity: 1, duration: 0.25 });
+                gsap.to(txt, {
+                    opacity: 0,
+                    delay: 0.8,
+                    duration: 0.4,
+                    onComplete: () => txt.destroy(),
+                });
+            }
+        }
+
+        k.loop(SAVE_INTERVAL, () => {
+            saveScore("auto");
+        });
+
+
 
         // ==== CLOCK SYSTEM ====
         const clockState = {
@@ -547,6 +592,11 @@ export function registerClicker() {
                 clockState.waitingForPaw = true
 
                 clockText.color = k.rgb(200, 0, 0)
+
+                const ticktock = k.play("ticktock", {
+                    volume: 3
+                })
+                k.wait(3, () => ticktock.stop())
             }
 
 

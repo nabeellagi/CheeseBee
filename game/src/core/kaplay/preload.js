@@ -39,6 +39,7 @@ const SFX = {
     coin3 : 'sfx/coin3.wav',
     combo : 'sfx/combo.wav',
     perf : 'sfx/perf.wav',
+    ticktock: 'sfx/ticktock.wav',
 }
 
 export async function preloadAll(){

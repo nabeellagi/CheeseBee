@@ -109,7 +109,7 @@ export function catEntity({
             k.width() - 50
         );
 
-        if (k.rand() < 0.7) {
+        if (k.rand() < 0.42) {
             k.play(k.choose(["cat1", "cat2"]), {
                 volume: 1.4,
             })
